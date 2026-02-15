@@ -11,13 +11,13 @@
   },
   "build": {
     "appId": "com.zowie.homeassistantwrapper",
-    "icon": "src-tauri/icons/icon.ico",
+    "icon": "Home Assistant Build.ico",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": "nsis",
-      "icon": "src-tauri/icons/icon.ico"
+      "icon": "Home Assistant Build.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -29,7 +29,9 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "electron": "^40.4.1",
-    "electron-builder": "^26.7.0"
+    "electron-builder": "^26.7.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
@@ -37,6 +39,7 @@
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.2",
+    "axios": "^1.13.5",
     "electron-store": "^11.0.2"
   }
 }
