@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home Assistant Setup</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="main.js" defer></script>
+</head>
+
+<body>
+  <div id="loader" class="loader"></div>
+
+
+  <div id="setup" class="container hidden">
+    <h1>Welcome</h1>
+    <p>Enter your Home Assistant Server URL to get started.</p>
+
+    <div class="input-group">
+      <label for="ha-url">Server URL</label>
+      <input type="url" id="ha-url" placeholder="http://homeassistant.local:8123"
+        value="http://homeassistant.local:8123" />
+    </div>
+
+    <div class="btn-group">
+      <button id="save-btn" class="btn">Connect</button>
+    </div>
+  </div>
+</body>
+
+</html>
