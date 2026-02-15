@@ -1,5 +1,6 @@
 {
-  "name": "tauri-app",
+  "name": "home-assistant-desktop",
+  "productName": "Home Assistant Desktop App",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,20 +11,23 @@
     "tauri": "tauri"
   },
   "build": {
-    "appId": "com.zowie.homeassistantwrapper",
+    "appId": "com.zowie.homeassistant.desktop",
+    "productName": "Home Assistant Desktop App",
     "icon": "Home Assistant Build.ico",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": "nsis",
-      "icon": "Home Assistant Build.ico"
+      "icon": "Home Assistant Build.ico",
+      "artifactName": "Home Assistant Desktop App Setup ${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "shortcutName": "Home Assistant Desktop App"
     }
   },
   "devDependencies": {

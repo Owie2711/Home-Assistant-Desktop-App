@@ -1,52 +1,71 @@
 
-
 import { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, shell, powerSaveBlocker } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import Store from 'electron-store';
 
 
-// Optimasi Memori dan Stabilitas
-app.commandLine.appendSwitch('disable-renderer-backgrounding');
-app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-app.commandLine.appendSwitch('disable-background-timer-throttling');
-app.commandLine.appendSwitch('enable-accelerated-mjpeg-decode'); // Percepat render CCTV MJPEG
-app.commandLine.appendSwitch('enable-gpu-rasterization'); // Gunakan GPU untuk render UI agar CPU lebih ringan
-app.commandLine.appendSwitch('enable-zero-copy'); // Mengurangi penggunaan CPU saat manipulasi buffer video
-app.commandLine.appendSwitch('ignore-connections-limit', '192.168.1.1,192.168.1.100'); // Ganti dengan IP server anda jika perlu
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256'); // Batasi V8 RAM agar tidak bocor (leak)
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const store = new Store();
+// --- KONFIGURASI PENYIMPANAN DATA (DI DALAM FOLDER INSTALASI) ---
+// Ini memastikan data terhapus saat folder aplikasi dihapus
+const appPath = path.dirname(app.getPath('exe'));
+const dataPath = path.join(appPath, 'data');
+
+if (!fs.existsSync(dataPath)) {
+    try {
+        fs.mkdirSync(dataPath, { recursive: true });
+    } catch (e) {
+        // Jika gagal tulis di folder exe (privelege), gunakan default sistem sebagai fallback
+        console.error('Gagal membuat folder data di folder instalasi, menggunakan default.');
+    }
+}
+
+if (fs.existsSync(dataPath)) {
+    app.setPath('userData', dataPath);
+}
+
+// --- OPTIMASI RESOURCE EKSTRIM (CPU, GPU, RAM) ---
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=128'); // Batasi V8 RAM lebih ketat (128MB)
+app.commandLine.appendSwitch('disk-cache-size', '10485760'); // Batasi cache disk hanya 10MB
+app.commandLine.appendSwitch('disable-software-rasterizer'); // Paksa Full Hardware Acceleration
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-accelerated-mjpeg-decode');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,InterestFeedContentSuggestions');
+
+const store = new Store({
+    cwd: dataPath // Pastikan Store menyimpan di folder data tersebut
+});
 
 let mainWindow;
 let tray;
 let psbId;
 
-
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 768,
-        title: "Home Assistant",
+        title: "Home Assistant Desktop App",
         icon: path.join(__dirname, '../Home Assistant.ico'),
 
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            partition: 'persist:main', // Simpan cookies dan session secara permanen
-            backgroundThrottling: false, // Mencegah throttling saat window tidak fokus
+            partition: 'persist:main',
+            backgroundThrottling: false,
         },
-        show: false, // Wait until ready-to-show
+        show: false,
     });
 
-    // Sembunyikan Menu Bar agar lebih seperti aplikasi desktop murni
     mainWindow.setMenuBarVisibility(false);
 
-    // Check Configured URL
     const haUrl = store.get('ha_url');
     if (haUrl) {
         mainWindow.loadURL(haUrl);
@@ -58,25 +77,20 @@ function createWindow() {
         mainWindow.show();
     });
 
-    // Navigation Handling
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         const currentUrl = store.get('ha_url');
-        // Izinkan window baru jika masih di dalam domain Home Assistant (misal untuk popup auth)
         if (currentUrl && url.startsWith(currentUrl)) {
             return { action: 'allow' };
         }
-        // Link luar dibuka di browser default
         shell.openExternal(url);
         return { action: 'deny' };
     });
 
     mainWindow.webContents.on('will-navigate', (event, url) => {
         const currentUrl = store.get('ha_url');
-        // Izinkan jika navigasi internal (file://) atau masih di dalam domain HASS
         if (url.startsWith('file:') || (currentUrl && url.startsWith(currentUrl))) {
             return;
         }
-        // Blokir navigasi eksternal lainnya
         event.preventDefault();
         shell.openExternal(url);
     });
@@ -105,7 +119,7 @@ function createTray() {
             }
         }
     ]);
-    tray.setToolTip('Home Assistant Wrapper');
+    tray.setToolTip('Home Assistant Desktop App');
     tray.setContextMenu(contextMenu);
 
     tray.on('double-click', () => {
@@ -129,92 +143,97 @@ function openSettingsWindow() {
     win.loadFile(path.join(__dirname, 'settings.html'));
 }
 
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
 
-
-app.whenReady().then(() => {
-    createWindow();
-    createTray();
-
-    // Mencegah PC masuk ke mode tidur atau suspend selama aplikasi berjalan
-    // Sangat penting untuk stream CCTV tanpa delay
-    psbId = powerSaveBlocker.start('prevent-app-suspension');
-    console.log('Power Save Blocker active:', powerSaveBlocker.isStarted(psbId));
-
-    // Buat Menu minimal untuk mendukung keyboard shortcuts (Zoom, DevTools, dll)
-    const template = [
-        {
-            label: 'View',
-            submenu: [
-                { role: 'reload' },
-                { role: 'forceReload' },
-                { role: 'toggleDevTools' },
-                { type: 'separator' },
-                { role: 'resetZoom' },
-                { role: 'zoomIn', accelerator: 'CmdOrCtrl+Plus' }, // Mendukung Ctrl + Plus
-                { role: 'zoomIn', accelerator: 'CmdOrCtrl+=' },    // Mendukung Ctrl + =
-                { role: 'zoomOut' },
-                { type: 'separator' },
-                { role: 'togglefullscreen' }
-            ]
-        },
-        {
-            label: 'Window',
-            submenu: [
-                { role: 'minimize' },
-                { role: 'close' }
-            ]
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
         }
-    ];
-
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
-
-    // IPC Handlers
-    ipcMain.handle('get-app-state', () => {
-        return {
-            url: store.get('ha_url'),
-            autoStart: app.getLoginItemSettings().openAtLogin
-        };
     });
 
-    ipcMain.handle('update-allowed-url', (event, url) => {
-        store.set('ha_url', url);
-        // Also update navigation logic? Maybe just re-check on nav event
-    });
+    app.whenReady().then(() => {
+        createWindow();
+        createTray();
 
-    ipcMain.handle('set-auto-start', (event, enabled) => {
-        app.setLoginItemSettings({
-            openAtLogin: enabled,
-            path: app.getPath('exe'),
+        psbId = powerSaveBlocker.start('prevent-app-suspension');
+
+        const template = [
+            {
+                label: 'View',
+                submenu: [
+                    { role: 'reload' },
+                    { role: 'forceReload' },
+                    { role: 'toggleDevTools' },
+                    { type: 'separator' },
+                    { role: 'resetZoom' },
+                    { role: 'zoomIn', accelerator: 'CmdOrCtrl+Plus' },
+                    { role: 'zoomIn', accelerator: 'CmdOrCtrl+=' },
+                    { role: 'zoomOut' },
+                    { type: 'separator' },
+                    { role: 'togglefullscreen' }
+                ]
+            },
+            {
+                label: 'Window',
+                submenu: [
+                    { role: 'minimize' },
+                    { role: 'close' }
+                ]
+            }
+        ];
+
+        const menu = Menu.buildFromTemplate(template);
+        Menu.setApplicationMenu(menu);
+
+        ipcMain.handle('get-app-state', () => {
+            return {
+                url: store.get('ha_url'),
+                autoStart: app.getLoginItemSettings().openAtLogin
+            };
+        });
+
+        ipcMain.handle('update-allowed-url', (event, url) => {
+            store.set('ha_url', url);
+        });
+
+        ipcMain.handle('set-auto-start', (event, enabled) => {
+            app.setLoginItemSettings({
+                openAtLogin: enabled,
+                path: app.getPath('exe'),
+            });
+        });
+
+        ipcMain.handle('reset-config', () => {
+            store.delete('ha_url');
+            mainWindow.loadFile(path.join(__dirname, 'index.html'));
+        });
+
+        ipcMain.handle('reload-main-window', () => {
+            const newUrl = store.get('ha_url');
+            if (newUrl) {
+                mainWindow.loadURL(newUrl);
+            } else {
+                mainWindow.loadFile(path.join(__dirname, 'index.html'));
+            }
+        });
+
+        ipcMain.handle('close-window', (event) => {
+            const win = BrowserWindow.fromWebContents(event.sender);
+            win.close();
+        });
+
+        app.on('activate', () => {
+            if (BrowserWindow.getAllWindows().length === 0) createWindow();
         });
     });
 
-
-
-    ipcMain.handle('reset-config', () => {
-        store.delete('ha_url');
-        mainWindow.loadFile(path.join(__dirname, 'index.html'));
+    app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') app.quit();
     });
-
-    ipcMain.handle('reload-main-window', () => {
-        const newUrl = store.get('ha_url');
-        if (newUrl) {
-            mainWindow.loadURL(newUrl);
-        } else {
-            mainWindow.loadFile(path.join(__dirname, 'index.html'));
-        }
-    });
-
-    ipcMain.handle('close-window', (event) => {
-        const win = BrowserWindow.fromWebContents(event.sender);
-        win.close();
-    });
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
-});
-// Handle quit when all windows are closed - usually irrelevant if we prevent default close
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
-});
+}
