@@ -48,9 +48,19 @@ let tray;
 let psbId;
 
 function createWindow() {
-    mainWindow = new BrowserWindow({
+    // Ambil posisi dan ukuran window yang disimpan (default: 1024x768)
+    const windowState = store.get('window_state', {
         width: 1024,
         height: 768,
+        x: undefined,
+        y: undefined
+    });
+
+    mainWindow = new BrowserWindow({
+        width: windowState.width,
+        height: windowState.height,
+        x: windowState.x,
+        y: windowState.y,
         title: "Home Assistant Desktop App",
         icon: path.join(__dirname, '../Home Assistant.ico'),
 
@@ -64,6 +74,16 @@ function createWindow() {
         show: false,
     });
 
+    // Simpan posisi dan ukuran window saat berubah
+    const saveState = () => {
+        if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
+            store.set('window_state', mainWindow.getBounds());
+        }
+    };
+
+    mainWindow.on('resize', saveState);
+    mainWindow.on('move', saveState);
+
     mainWindow.setMenuBarVisibility(false);
 
     const haUrl = store.get('ha_url');
@@ -74,6 +94,7 @@ function createWindow() {
     }
 
     mainWindow.once('ready-to-show', () => {
+        mainWindow.setAlwaysOnTop(store.get('always_on_top', false));
         mainWindow.show();
     });
 
@@ -96,10 +117,12 @@ function createWindow() {
     });
 
     mainWindow.on('close', (event) => {
-        if (!app.isQuitting) {
+        const minimizeToTray = store.get('minimize_to_tray', true); // Default true agar aman
+        if (!app.isQuitting && minimizeToTray) {
             event.preventDefault();
             mainWindow.hide();
         }
+        // Jika minimizeToTray false, window akan benar-benar tertutup (program exit)
         return false;
     });
 }
@@ -129,17 +152,20 @@ function createTray() {
 
 function openSettingsWindow() {
     const win = new BrowserWindow({
-        width: 600,
-        height: 400,
+        width: 480,
+        height: 550,
+        resizable: false,
         title: "Settings",
         parent: mainWindow,
         modal: true,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
         },
     });
+    win.setMenuBarVisibility(false);
     win.loadFile(path.join(__dirname, 'settings.html'));
 }
 
@@ -194,8 +220,21 @@ if (!gotTheLock) {
         ipcMain.handle('get-app-state', () => {
             return {
                 url: store.get('ha_url'),
-                autoStart: app.getLoginItemSettings().openAtLogin
+                autoStart: app.getLoginItemSettings().openAtLogin,
+                alwaysOnTop: store.get('always_on_top', false),
+                minimizeToTray: store.get('minimize_to_tray', true)
             };
+        });
+
+        ipcMain.handle('set-minimize-to-tray', (event, enabled) => {
+            store.set('minimize_to_tray', enabled);
+        });
+
+        ipcMain.handle('set-always-on-top', (event, enabled) => {
+            store.set('always_on_top', enabled);
+            if (mainWindow) {
+                mainWindow.setAlwaysOnTop(enabled);
+            }
         });
 
         ipcMain.handle('update-allowed-url', (event, url) => {

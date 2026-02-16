@@ -1,6 +1,8 @@
 
 const urlInput = document.getElementById('ha-url');
 const autostartInput = document.getElementById('autostart');
+const alwaysOnTopInput = document.getElementById('always-on-top');
+const minimizeToTrayInput = document.getElementById('minimize-to-tray');
 const saveBtn = document.getElementById('save-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 
@@ -12,6 +14,8 @@ async function init() {
             urlInput.value = state.url;
         }
         autostartInput.checked = state.autoStart;
+        alwaysOnTopInput.checked = state.alwaysOnTop;
+        minimizeToTrayInput.checked = state.minimizeToTray;
 
         saveBtn.addEventListener('click', async () => {
             let url = urlInput.value.trim();
@@ -22,6 +26,8 @@ async function init() {
 
                 await window.electronAPI.updateAllowedUrl(url);
                 await window.electronAPI.setAutoStart(autostartInput.checked);
+                await window.electronAPI.setAlwaysOnTop(alwaysOnTopInput.checked);
+                await window.electronAPI.setMinimizeToTray(minimizeToTrayInput.checked);
                 await window.electronAPI.reloadMainWindow();
                 await window.electronAPI.closeWindow();
             }

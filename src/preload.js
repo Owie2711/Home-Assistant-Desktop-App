@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAppState: () => ipcRenderer.invoke('get-app-state'),
     updateAllowedUrl: (url) => ipcRenderer.invoke('update-allowed-url', url),
     setAutoStart: (enabled) => ipcRenderer.invoke('set-auto-start', enabled),
+    setAlwaysOnTop: (enabled) => ipcRenderer.invoke('set-always-on-top', enabled),
+    setMinimizeToTray: (enabled) => ipcRenderer.invoke('set-minimize-to-tray', enabled),
     reloadMainWindow: () => ipcRenderer.invoke('reload-main-window'),
     closeWindow: () => ipcRenderer.invoke('close-window'),
     resetConfig: () => ipcRenderer.invoke('reset-config'),
