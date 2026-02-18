@@ -25,10 +25,11 @@ A powerful, lightweight, and dedicated desktop wrapper for your **Home Assistant
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="ScreenShoots/1.png" width="45%" alt="Setup Screen">
-  <img src="ScreenShoots/2.png" width="45%" alt="Main Dashboard">
-  <br>
-  <img src="ScreenShoots/3.png" width="45%" alt="Settings Screen">
+  <img src="ScreenShoots/1.png" width="80%" alt="Setup Screen">
+  <br><br>
+  <img src="ScreenShoots/2.png" width="80%" alt="Main Dashboard">
+  <br><br>
+  <img src="ScreenShoots/3.png" width="80%" alt="Settings Screen">
 </p>
 
 ---
