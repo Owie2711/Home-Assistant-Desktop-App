@@ -22,6 +22,11 @@
       "icon": "Home Assistant Build.ico",
       "artifactName": "Home Assistant Desktop App Setup ${version}.${ext}"
     },
+    "mac": {
+      "target": "dmg",
+      "icon": "Home Assistant Build.ico",
+      "artifactName": "Home Assistant Desktop App ${version}.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
