@@ -3,6 +3,8 @@
   "productName": "Home Assistant Desktop App",
   "private": true,
   "version": "0.1.0",
+  "description": "Desktop application for Home Assistant",
+  "author": "Owie2711",
   "type": "module",
   "main": "src/electron-main.js",
   "scripts": {
@@ -21,6 +23,11 @@
       "target": "nsis",
       "icon": "Home Assistant Build.ico",
       "artifactName": "Home Assistant Desktop App Setup ${version}.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "src-tauri/icons/icon.icns",
+      "artifactName": "Home Assistant Desktop App ${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
