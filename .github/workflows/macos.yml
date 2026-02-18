@@ -28,7 +28,7 @@ jobs:
 
       - name: Build macOS App
         run: |
-          npm run build -- --mac x64 arm64
+          npm run build -- --mac --x64 --arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Mengabaikan code signing jika tidak ada sertifikat (untuk testing/unsign build)
